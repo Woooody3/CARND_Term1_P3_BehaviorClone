@@ -25,6 +25,7 @@ with open('data/driving_log.csv') as csvfile:
 
 images = []
 measurements = []
+correction = 0.2
 for line in lines:
 	for i in range(3):
 		source_path = line[i]
@@ -32,38 +33,39 @@ for line in lines:
 		current_path = 'data/IMG/' + filename
 		image = cv2.imread(current_path)
 		images.append(image)
-		images.append(np.fliplr(image)) # append augmented image
-		measurement = float(line[3]) + 0.2 * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
+		measurement = float(line[3]) + correction * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
 		measurements.append(measurement)
-		measurements.append(measurement * (-1)) # append augmented measurement
 
 '''
-Follow 6 lines are learnt from course vedio, however, I choose to append the augment data in each line-reading. 
+Follow 6 lines are learnt from course vedio, 
+actually I don't understand the differences to 
+add augmented data in "for line in lines" cycle.
 '''
-#augmented_images, augmented_measurement = [], []
-#for image, measurement in zip(images, measurements):
-#	augmented_images.append(image)
-#	augmented_measurements.append(measurement)
-#	augmented_images.append(cv2.flip(image, 1))
-#	augmented_measurements.append(measurement * (-1))
+augmented_images, augmented_measurements = [], []
+for image, measurement in zip(images, measurements):
+	augmented_images.append(image)
+	augmented_measurements.append(measurement)
+	augmented_images.append(cv2.flip(image, 1))
+	augmented_measurements.append(measurement * (-1))
 
-X_train = np.array(images)
-y_train = np.array(measurements)
+X_train = np.array(augmented_images)
+y_train = np.array(augmented_measurements)
 
 from keras.models import Sequential, Model
-from keras.layers import Flatten, Dense, Lambda, Activation
+from keras.layers import Flatten, Dense, Lambda, Cropping2D
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D
 
 model = Sequential()
-model.add(Lambda(lambda x: (x/255.0)-0.5, input_shape=(160,320,3)))
-model.add(Convolution2D(32,3,3,activation='relu'))
+model.add(Cropping2D(cropping=(75,25),(0,0), input_shape=(160,320,3)))
+model.add(Lambda(lambda x: (x/255.0)-0.5))
+model.add(Convolution2D(6,5,5, activation='relu'))
 model.add(MaxPooling2D())
 model.add(Convolution2D(6,5,5, activation='relu'))
 model.add(MaxPooling2D())
 model.add(Flatten())
 model.add(Dense(120))
-model.add(Dense(60))
+model.add(Dense(84))
 model.add(Dense(1))
 
 
