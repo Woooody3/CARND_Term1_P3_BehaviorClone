@@ -15,7 +15,7 @@ with open('0831_1/driving_log.csv') as csvfile:
 	for line in reader:
 		prob = np.random.random()
 		current_abs_angle = abs(float(line[3]))
-		if prob < 0.9 and current_abs_angle < 0.01:
+		if prob < 0.8 and current_abs_angle < 0.01:
 			continue
 		lines.append(line)
 
@@ -41,7 +41,9 @@ def generator(samples, batch_size=32):
 				#	continue
 				# read in the image and corrected image
 				image_path = '0831_1/IMG/' + batch_sample[i].split('/')[-1]
-				image = cv2.imread(image_path)
+				img = cv2.imread(image_path)
+				image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV )
+				image = image[1]
 				measurement = float(batch_sample[3]) + 0.2 * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
 				# do a randomly flipping
 				if prob > 0.5:
@@ -93,8 +95,8 @@ model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
 # Confused: what's the better value of the samples_per_epoch?
-history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples)*4, 
-	validation_data=validation_generator, nb_val_samples=len(validation_samples)*4, 
+history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples)*3, 
+	validation_data=validation_generator, nb_val_samples=len(validation_samples)*3, 
 	nb_epoch=6, verbose=1)
 print(history_object.history.keys())
 
