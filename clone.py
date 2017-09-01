@@ -15,12 +15,22 @@ with open('0831_1/driving_log.csv') as csvfile:
 	for line in reader:
 		prob = np.random.random()
 		current_abs_angle = abs(float(line[3]))
-		if prob < 0.8 and current_abs_angle < 0.01:
+		if prob < 0.9 and current_abs_angle < 0.01:
 			continue
 		lines.append(line)
 
 
 train_samples, validation_samples = train_test_split(lines, test_size=0.2)
+
+# Define an image-color-adjustment function
+def img_color_adjust(image):
+	hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+	hsv = np.array(hsv, dtype=np.float32)
+	hsv[:,:,2] *= np.random.uniform(0.33, 1) # randomly adjust image brightness
+	hsv = np.array(hsv, dtype=np.uint8)
+	rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+	return rgb	
+
 
 # Define a generator to pre-process the data, 
 # which will accelerate the calculation when large scale input data.
@@ -36,19 +46,18 @@ def generator(samples, batch_size=32):
 			for batch_sample in batch_samples:
 				i = np.random.choice([0,1,2]) # randomly choice one image from one line
 				# exclude 70% of center image when zero steering 
-				#prob = np.random.random()
-				#if i == 0 and prob <0.7 and abs(float(batch_sample[3]))<0.75:
-				#	continue
-				# read in the image and corrected image
+				prob = np.random.random()
+				###if i == 0 and prob <0.7 and abs(float(batch_sample[3]))<0.01:
+				###	continue
+				#read in the image and correct the steering
 				image_path = '0831_1/IMG/' + batch_sample[i].split('/')[-1]
 				img = cv2.imread(image_path)
-				image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV )
-				image = image[1]
+				image = img_color_adjust(img)
 				measurement = float(batch_sample[3]) + 0.2 * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
 				# do a randomly flipping
 				if prob > 0.5:
 					image = cv2.flip(image,1)
-					measurement = measurement * (-1)
+					measurement = measurement * (-1)	
 				# append one pair of data in one line.
 				images.append(image)
 				measurements.append(measurement)
@@ -95,8 +104,8 @@ model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
 # Confused: what's the better value of the samples_per_epoch?
-history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples)*3, 
-	validation_data=validation_generator, nb_val_samples=len(validation_samples)*3, 
+history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples)*4, 
+	validation_data=validation_generator, nb_val_samples=len(validation_samples)*4, 
 	nb_epoch=6, verbose=1)
 print(history_object.history.keys())
 
@@ -111,13 +120,3 @@ plt.show()
 
 model.save('model.h5')
 exit()
-
-
-
-
-					
-
-					
-				
-
-
