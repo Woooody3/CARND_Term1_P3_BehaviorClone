@@ -19,7 +19,6 @@ with open('0831_1/driving_log.csv') as csvfile:
 			continue
 		lines.append(line)
 
-
 train_samples, validation_samples = train_test_split(lines, test_size=0.2)
 
 # Define an image-color-adjustment function
@@ -44,23 +43,20 @@ def generator(samples, batch_size=32):
 			images = []
 			measurements = []
 			for batch_sample in batch_samples:
-				i = np.random.choice([0,1,2]) # randomly choice one image from one line
-				# exclude 70% of center image when zero steering 
-				prob = np.random.random()
-				###if i == 0 and prob <0.7 and abs(float(batch_sample[3]))<0.01:
-				###	continue
 				#read in the image and correct the steering
-				image_path = '0831_1/IMG/' + batch_sample[i].split('/')[-1]
-				img = cv2.imread(image_path)
-				image = img_color_adjust(img)
-				measurement = float(batch_sample[3]) + 0.2 * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
+				for i in range(3):
+					image_path = '0831_1/IMG/' + batch_sample[i].split('/')[-1]
+					img = cv2.imread(image_path)
+					image = img_color_adjust(img)
+					measurement = float(batch_sample[3]) + 0.2 * (5*i - 3*i*i) /2	# if i=0, measurement is center; if i=1, measurement is +0.2 correction, if i=2, measurement is -0.2 correction.
 				# do a randomly flipping
-				if prob > 0.5:
-					image = cv2.flip(image,1)
-					measurement = measurement * (-1)	
+					prob = np.random.random()
+					if prob > 0.5:
+						image = cv2.flip(image,1)
+						measurement = measurement * (-1)	
 				# append one pair of data in one line.
-				images.append(image)
-				measurements.append(measurement)
+					images.append(image)
+					measurements.append(measurement)
 
 			X_in = np.array(images)
 			y_in = np.array(measurements)
@@ -104,8 +100,8 @@ model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
 # Confused: what's the better value of the samples_per_epoch?
-history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples)*4, 
-	validation_data=validation_generator, nb_val_samples=len(validation_samples)*4, 
+history_object = model.fit_generator(train_generator, samples_per_epoch=len(train_samples), 
+	validation_data=validation_generator, nb_val_samples=len(validation_samples), 
 	nb_epoch=6, verbose=1)
 print(history_object.history.keys())
 
